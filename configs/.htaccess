@@ -1,0 +1,70 @@
+# ==============================================================================
+# WordPress Security Hardening - Production Apache / LiteSpeed Rules
+# Author: Mark Anthony Garcia (GEENXT)
+# Repository: https://github.com/markans/wordpress-security-hardening-playbook
+# Reference Guide: https://www.geenxt.com/blog/how-to-harden-wordpress-security/
+# ==============================================================================
+
+# 1. Disable Directory Browsing
+Options -Indexes
+
+# 2. Block PHP Execution in Uploads Directory
+# Note: Place an additional .htaccess file with these two lines inside /wp-content/uploads/
+# <Files *.php>
+#     Require all denied
+# </Files>
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /
+    # Deny direct execution of scripts inside wp-content/uploads/
+    RewriteRule ^wp-content/uploads/.*\.php$ - [F,L]
+</IfModule>
+
+# 3. Protect Sensitive WordPress Files
+<FilesMatch "^(wp-config\.php|readme\.html|license\.txt|\.env|\.git|\.user\.ini|php\.ini)">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
+</FilesMatch>
+
+# 4. Deny Access to Backup Dumps, Logs, and Configuration Backups
+<FilesMatch "\.(sql|bak|swp|dist|inc|old|orig|save|test|tpl|log)$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
+</FilesMatch>
+
+# 5. Disable XML-RPC Endpoint
+<Files "xmlrpc.php">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
+</Files>
+
+# 6. Block Author Enumeration Scans
+<IfModule mod_rewrite.c>
+    RewriteCond %{QUERY_STRING} ^author=([0-9]+) [NC]
+    RewriteRule ^$ - [F,L]
+</IfModule>
+
+# 7. Defensive HTTP Security Headers
+<IfModule mod_headers.c>
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set X-Content-Type-Options "nosniff"
+    Header set Referrer-Policy "strict-origin-when-cross-origin"
+    Header set Permissions-Policy "camera=(), microphone=(), geolocation=(), browsing-topics=()"
+    Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains; preload" env=HTTPS
+</IfModule>
